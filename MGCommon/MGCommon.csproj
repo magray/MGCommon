@@ -39,6 +39,7 @@
   <ItemGroup>
     <Compile Include="BaseViewModel.cs" />
     <Compile Include="Grouping.cs" />
+    <Compile Include="Messenger.cs" />
     <Compile Include="ObservableObject.cs" />
     <Compile Include="ObservableRangeCollection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
