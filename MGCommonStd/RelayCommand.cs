@@ -1,45 +1,79 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Windows.Input;
 
 namespace MGCommon
 {
-    public class RelayCommand : ICommand
+    public class Command<T> : Command
     {
-        Action<object> execute;
-        Predicate<object> canExecute;
-
-        public event EventHandler CanExecuteChanged;
-
-        public RelayCommand(Action<object> execute)
-            : this(execute, null)
-        { }
-
-        public RelayCommand(Action<object> execute, Predicate<object> canExecute)
+        public Command(Action<T> execute) : base(o =>
+        {
+            if (CommandUtils.IsValidCommandParameter<T>(o))
+                execute((T)o);
+        })
         {
             if (execute == null)
-                throw new ArgumentNullException("execute");
+            {
+                throw new ArgumentNullException(nameof(execute));
+            }
+        }
 
-            this.execute = execute;
+        public Command(Action<T> execute, Func<T, bool> canExecute) : base(o=>
+        {
+            if (CommandUtils.IsValidCommandParameter<T>(o))
+                execute((T)o);
+        }, o => {
+            return CommandUtils.IsValidCommandParameter<T>(o) && canExecute((T)o);
+        })
+        {
+            if (execute == null)
+                throw new ArgumentNullException(nameof(execute));
+            if (canExecute == null)
+                throw new ArgumentNullException(nameof(canExecute));
+        }
+    }
+    
+    public class Command : ICommand
+    {
+        readonly Func<object, bool>? canExecute;
+        readonly Action<object> execute;
+        readonly WeakEventManager weakEventManager = new WeakEventManager();
+        
+
+        public Command(Action<object> execute)
+        {
+            this.execute = execute ?? throw new ArgumentNullException(nameof(execute));
+        }
+
+        public Command(Action execute) : this(o=> execute())
+        {
+            if (execute == null)
+                throw new ArgumentNullException(nameof(execute));
+        }
+
+        public Command(Action<object> execute, Func<object,bool>? canExecute) : this(execute)
+        {
             this.canExecute = canExecute;
         }
 
-
-
-        public void RaiseCanExecuteChanged()
+        public Command(Action execute, Func<bool>? canExecute) : this(o=> execute())
         {
-            CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+            if (execute == null)
+                throw new ArgumentNullException(nameof(execute));
+
+            if (canExecute != null)
+                this.canExecute = o => canExecute();
         }
 
-        public bool CanExecute(object parameter)
+        public bool CanExecute(object parameter) => canExecute?.Invoke(parameter) ?? true;
+
+        public event EventHandler CanExecuteChanged
         {
-            return canExecute == null || canExecute != null && canExecute(parameter);
+            add { weakEventManager.AddEventHandler(value); }
+            remove { weakEventManager.RemoveEventHandler(value); }
         }
 
-        public void Execute(object parameter)
-        {
-            execute(parameter);
-        }
+        public void Execute(object parameter) => execute(parameter);
+
+        public void RaiseCanExecuteChanged() => weakEventManager.HandleEvent(this, EventArgs.Empty, nameof(CanExecuteChanged));
     }
 }

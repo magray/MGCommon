@@ -6,6 +6,8 @@ namespace MGCommon
     {
         public T Key { get; private set; }
 
+        public new IList<TV> Items => base.Items;
+        
         public Grouping(T key, IEnumerable<TV> items)
         {
             Key = key;

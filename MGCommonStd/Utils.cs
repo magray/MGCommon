@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 
 namespace MGCommon
 {
@@ -22,6 +23,19 @@ namespace MGCommon
                 return task.Result;
 
             return default(T);
+        }
+
+        public static async void SafeFireAndForget(this Task task, Action<Exception> onException = null, bool continueOnCaptureContext = false)
+        {
+            try
+            {
+                await task.ConfigureAwait(continueOnCaptureContext);
+            }
+            catch (Exception ex) when (onException != null)
+            {
+                onException.Invoke(ex);
+                
+            }
         }
     }
 }
